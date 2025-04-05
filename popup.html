@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Popup</title>
+    <style>
+        body {
+            width: 300px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        p {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="display: flex; align-items: center;">
+      <img src="icon.svg" alt="Extension Icon" width="24" height="24" style="margin-right: 10px;">
+      Tab History Navigator
+    </h1>
+    <p>Use the following shortcuts to navigate between your tab history:</p>
+    <p><strong>Go Back:</strong> Ctrl+Shift+Left</p>
+    <p><strong>Go Forward:</strong> Ctrl+Shift+Right</p>
+    <script src="popup.js"></script>
+</body>
+</html>
