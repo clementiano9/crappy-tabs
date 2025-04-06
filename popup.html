@@ -3,33 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extension Popup</title>
+    <title>Tab Navigator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
-        body {
-            width: 300px;
-            padding: 10px;
-            font-family: Arial, sans-serif;
+        :root {
+            --primary: #6366F1;
+            --primary-light: #818CF8;
+            --primary-gradient: linear-gradient(135deg, #6366F1, #8B5CF6);
+            --bg: #ffffff;
+            --text: #1F2937;
+            --text-secondary: #6B7280;
+            --success: #10B981;
+            --surface: #F3F4F6;
+            --surface-hover: rgba(99, 102, 241, 0.1);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        h1 {
-            font-size: 18px;
-            margin-bottom: 10px;
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1A1F2B;
+                --text: #F9FAFB;
+                --text-secondary: #D1D5DB;
+                --surface: #252B3B;
+                --surface-hover: rgba(99, 102, 241, 0.15);
+            }
+        }
+
+        body {
+            width: 320px;
+            margin: 0;
+            padding: 16px;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+
+        .header {
             display: flex;
             align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--surface);
         }
-        p {
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+
+        .logo-icon i {
+            font-size: 24px;
+            color: white;
+        }
+
+        .logo:hover .logo-icon {
+            transform: scale(1.1);
+        }
+
+        .logo-text {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 24px 0;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: var(--surface);
+            transform: translateY(-50%);
+        }
+
+        .timeline-marker {
+            width: 12px;
+            height: 12px;
+            background: var(--surface);
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+
+        .timeline-marker.past {
+            background: var(--primary-light);
+        }
+
+        .timeline-marker.current {
+            width: 32px;
+            height: 32px;
+            background: var(--primary-gradient);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .timeline-marker.future {
+            background: var(--surface);
+            opacity: 0.5;
+        }
+
+        .timeline-marker.available {
+            cursor: pointer;
+        }
+
+        .timeline-marker.available:hover {
+            transform: scale(1.2);
+        }
+
+        .timeline-info {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .timeline-marker:hover .timeline-info {
+            opacity: 1;
+        }
+
+        .timeline-counter {
+            position: absolute;
+            bottom: 0;
+            left: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .shortcuts {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .shortcut-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            background: var(--bg);
+        }
+
+        .shortcut-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .shortcut-item:hover {
+            background: var(--surface-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .shortcut-label {
             font-size: 14px;
-            margin-bottom: 5px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shortcut-label i {
+            font-size: 18px;
+            color: var(--primary);
+        }
+
+        .shortcut-key {
+            display: flex;
+            gap: 4px;
+        }
+
+        .key {
+            background: var(--surface);
+            color: var(--primary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .key i {
+            font-size: 14px;
+        }
+
+        .success-indicator {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: var(--primary-gradient);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .success-indicator.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
 <body>
-    <h1 style="display: flex; align-items: center;">
-      <img src="icon.svg" alt="Extension Icon" width="24" height="24" style="margin-right: 10px;">
-      Tab History Navigator
-    </h1>
-    <p>Use the following shortcuts to navigate between your tab history:</p>
-    <p><strong>Go Back:</strong> Ctrl+Shift+Left</p>
-    <p><strong>Go Forward:</strong> Ctrl+Shift+Right</p>
+    <header class="header">
+        <a href="#" class="logo">
+            <div class="logo-icon">
+                <i class="ri-route-line"></i>
+            </div>
+            <h1 class="logo-text">Tab Navigator</h1>
+        </a>
+    </header>
+
+    <div class="timeline">
+        <div class="timeline-marker past available" title="2 positions back">
+            <span class="timeline-info">2 tabs back</span>
+        </div>
+        <div class="timeline-marker past available" title="1 position back">
+            <span class="timeline-info">Previous tab</span>
+        </div>
+        <div class="timeline-marker current" title="Current position">
+            <i class="ri-focus-2-line"></i>
+            <span class="timeline-info">Current tab</span>
+        </div>
+        <div class="timeline-marker future available" title="1 position forward">
+            <span class="timeline-info">Next tab</span>
+        </div>
+        <div class="timeline-marker future" title="No more forward positions">
+            <span class="timeline-info">End of history</span>
+        </div>
+        <span class="timeline-counter">5 tabs in history</span>
+    </div>
+
+    <div class="shortcuts">
+        <div class="shortcut-item">
+            <span class="shortcut-label">
+                <i class="ri-arrow-left-circle-line"></i>
+                Navigate Back
+            </span>
+            <div class="shortcut-key">
+                <span class="key">
+                    <i class="ri-command-line"></i>
+                    Ctrl
+                </span>
+                <span class="key">
+                    <i class="ri-shift-line"></i>
+                    ⇧
+                </span>
+                <span class="key">
+                    <i class="ri-arrow-left-line"></i>
+                </span>
+            </div>
+        </div>
+        <div class="shortcut-item">
+            <span class="shortcut-label">
+                <i class="ri-arrow-right-circle-line"></i>
+                Navigate Forward
+            </span>
+            <div class="shortcut-key">
+                <span class="key">
+                    <i class="ri-command-line"></i>
+                    Ctrl
+                </span>
+                <span class="key">
+                    <i class="ri-shift-line"></i>
+                    ⇧
+                </span>
+                <span class="key">
+                    <i class="ri-arrow-right-line"></i>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="success-indicator" id="successIndicator">
+        <i class="ri-check-line"></i>
+        Navigated!
+    </div>
+
     <script src="popup.js"></script>
+    <script>
+        // Add interaction feedback
+        document.querySelectorAll('.shortcut-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const indicator = document.getElementById('successIndicator');
+                indicator.classList.add('show');
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 2000);
+            });
+        });
+    </script>
 </body>
 </html>
