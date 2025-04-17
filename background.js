@@ -9,6 +9,13 @@ const MAX_HISTORY_SIZE = 60;
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 /**
+ * Cache of validated tab IDs to reduce API calls
+ * Key: tabId, Value: { exists: boolean, timestamp: number }
+ */
+let tabValidationCache = new Map();
+const CACHE_DURATION = 30000; // 30 seconds
+
+/**
  * Event listener for when the extension starts up.
  * Initializes the tab history when the extension is started.
  */
@@ -175,6 +182,55 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 });
 
 /**
+ * Validates if a tab exists in Chrome with caching
+ * @param {number} tabId - The ID of the tab to check
+ * @returns {Promise<boolean>} - True if tab exists, false otherwise
+ */
+async function tabExists(tabId) {
+  const now = Date.now();
+  const cached = tabValidationCache.get(tabId);
+  
+  if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+    return cached.exists;
+  }
+  
+  try {
+    await chrome.tabs.get(tabId);
+    tabValidationCache.set(tabId, { exists: true, timestamp: now });
+    return true;
+  } catch (e) {
+    tabValidationCache.set(tabId, { exists: false, timestamp: now });
+    return false;
+  }
+}
+
+/**
+ * Cleans up non-existent tabs from history
+ * @returns {Promise<void>}
+ */
+async function cleanupNonExistentTabs() {
+  // Skip cleanup if no changes likely needed
+  if (tabHistory.length === 0) return;
+  
+  // Batch validate all tabs at once
+  const validationPromises = tabHistory.map(tabId => tabExists(tabId));
+  const validationResults = await Promise.all(validationPromises);
+  
+  const validTabs = tabHistory.filter((_, index) => validationResults[index]);
+  
+  // Only update if changes needed
+  if (validTabs.length !== tabHistory.length) {
+    const oldCurrentTab = tabHistory[currentIndex];
+    tabHistory = validTabs;
+    currentIndex = Math.max(0, tabHistory.indexOf(oldCurrentTab));
+    if (tabHistory.length === 0) currentIndex = -1;
+    
+    console.log('Cleaned up history:', tabHistory, 'new currentIndex:', currentIndex);
+    saveState();
+  }
+}
+
+/**
  * Listener for command events triggered by keyboard shortcuts.
  * This method handles navigation through the tab history based on user commands.
  * 
@@ -184,10 +240,9 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
  * 
  * It also recovers the tab history if the service worker was terminated.
  */
-chrome.commands.onCommand.addListener((command) => {
-  storage.get(['tabHistory', 'currentIndex'], (result) => {
+chrome.commands.onCommand.addListener(async (command) => {
+  storage.get(['tabHistory', 'currentIndex'], async (result) => {
     if (!tabHistory.length && result.tabHistory && result.tabHistory.length) {
-      // Service worker was terminated, recover the history
       tabHistory = result.tabHistory;
       currentIndex = result.currentIndex;
       console.log('Recovered tab history from storage:', tabHistory);
@@ -204,19 +259,55 @@ chrome.commands.onCommand.addListener((command) => {
     console.log('Current history:', JSON.stringify(tabHistory));
     console.log('Current index:', currentIndex);
 
+    // Only clean up if we haven't done so recently
+    const lastCleanup = await storage.get('lastCleanupTime');
+    const now = Date.now();
+    if (!lastCleanup || (now - lastCleanup) > CLEANUP_INTERVAL) {
+      await cleanupNonExistentTabs();
+      storage.set({ lastCleanupTime: now });
+    }
+
     if (command === "go-back") {
       if (currentIndex > 0) {
         console.log('Moving back from index', currentIndex, 'to', currentIndex - 1);
-        currentIndex--;
-        chrome.tabs.update(tabHistory[currentIndex], { active: true });
+        let targetIndex = currentIndex - 1;
+        
+        // Use cached validation when possible
+        while (targetIndex >= 0) {
+          if (await tabExists(tabHistory[targetIndex])) {
+            currentIndex = targetIndex;
+            await chrome.tabs.update(tabHistory[currentIndex], { active: true });
+            break;
+          }
+          targetIndex--;
+        }
+        
+        if (targetIndex < 0) {
+          console.log('No valid tabs found when going back');
+          await cleanupNonExistentTabs();
+        }
       } else {
         console.log('Already at start of history');
       }
     } else if (command === "go-forward") {
       if (currentIndex < tabHistory.length - 1) {
         console.log('Moving forward from index', currentIndex, 'to', currentIndex + 1);
-        currentIndex++;
-        chrome.tabs.update(tabHistory[currentIndex], { active: true });
+        let targetIndex = currentIndex + 1;
+        
+        // Use cached validation when possible
+        while (targetIndex < tabHistory.length) {
+          if (await tabExists(tabHistory[targetIndex])) {
+            currentIndex = targetIndex;
+            await chrome.tabs.update(tabHistory[currentIndex], { active: true });
+            break;
+          }
+          targetIndex++;
+        }
+        
+        if (targetIndex >= tabHistory.length) {
+          console.log('No valid tabs found when going forward');
+          await cleanupNonExistentTabs();
+        }
       } else {
         console.log('Already at end of history');
       }
@@ -300,3 +391,19 @@ const logTabHistory = async (tabHistory) => {
   }
   console.log('=========================');
 };
+
+// Reduce cleanup interval to be less frequent
+const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
+// Clear validation cache periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [tabId, data] of tabValidationCache.entries()) {
+    if (now - data.timestamp > CACHE_DURATION) {
+      tabValidationCache.delete(tabId);
+    }
+  }
+}, CACHE_DURATION);
+
+// Update cleanup interval
+setInterval(cleanupNonExistentTabs, CLEANUP_INTERVAL);
