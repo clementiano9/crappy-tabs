@@ -101,23 +101,43 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
       console.log('Recovered tab history from storage:', tabHistory);
     }
 
-    if (currentIndex < tabHistory.length - 1) {
-      // We've gone back in tabs, so reverse the remaining history
-      const remainingHistory = tabHistory.slice(currentIndex + 1).reverse();
-      tabHistory = tabHistory.slice(0, currentIndex + 1).concat(remainingHistory);
-      console.log('Changing history to:', tabHistory);
-    }
-    if (!tabHistory.includes(activeInfo.tabId)) {
-      // If we have reached the max history size, remove the oldest tab
+    // Log initial state
+    console.log('=== Tab Activation ===');
+    console.log('Activated tab:', activeInfo.tabId);
+    console.log('Current history:', JSON.stringify(tabHistory));
+    console.log('Current index:', currentIndex);
+
+    const existingIndex = tabHistory.indexOf(activeInfo.tabId);
+    console.log('Tab exists in history at index:', existingIndex);
+    
+    if (existingIndex === -1) {
+      console.log('New tab - adding to end of history');
+      // New tab not in history - add to end
       if (tabHistory.length >= MAX_HISTORY_SIZE) {
+        console.log('History full - removing oldest tab:', tabHistory[0]);
         tabHistory.shift();
       }
       tabHistory.push(activeInfo.tabId);
       currentIndex = tabHistory.length - 1;
-      console.log('Added new tab to history:', tabHistory);
+    } else {
+      // Tab exists in history
+      if (currentIndex === tabHistory.length - 1) {
+        console.log('At end of history - moving existing tab to end');
+        // At end of history - move tab to end
+        tabHistory.splice(existingIndex, 1);
+        tabHistory.push(activeInfo.tabId);
+        currentIndex = tabHistory.length - 1;
+      } else {
+        console.log('In middle of history - updating currentIndex only');
+        // In middle of history - just update currentIndex
+        currentIndex = existingIndex;
+      }
     }
-    console.log('Updated tab history:', tabHistory);
-    console.log('Current index:', currentIndex);
+    
+    console.log('=== Final State ===');
+    console.log('Updated history:', JSON.stringify(tabHistory));
+    console.log('New current index:', currentIndex);
+    console.log('==================');
     saveState();
   });
 });
@@ -130,9 +150,26 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   // When a tab is removed, remove it from the history
   const index = tabHistory.indexOf(tabId);
   if (index > -1) {
+    // Remove the tab from history
     tabHistory.splice(index, 1);
+    
+    // Adjust currentIndex based on removal position
+    if (index < currentIndex) {
+      // If removed tab was before current, decrease currentIndex
+      currentIndex--;
+    } else if (index === currentIndex) {
+      // If removed tab was current, move to previous tab
+      currentIndex = Math.max(currentIndex - 1, tabHistory.length - 1);
+    }
+    
+    // If history is empty, reset currentIndex
+    if (tabHistory.length === 0) {
+      currentIndex = -1;
+    }
+    
     console.log('Removed tab from history:', tabId);
     console.log('Updated tab history:', tabHistory);
+    console.log('New current index:', currentIndex);
     saveState();
   }
 });
@@ -157,28 +194,39 @@ chrome.commands.onCommand.addListener((command) => {
     }
 
     if (tabHistory.length === 0) {
-      console.log('Reinitializing tab history');
+      console.log('History empty - reinitializing');
       initializeTabHistory();
       return;
     }
 
+    console.log('=== Navigation Command ===');
+    console.log('Command:', command);
+    console.log('Current history:', JSON.stringify(tabHistory));
+    console.log('Current index:', currentIndex);
+
     if (command === "go-back") {
       if (currentIndex > 0) {
-        console.log('Going back');
+        console.log('Moving back from index', currentIndex, 'to', currentIndex - 1);
         currentIndex--;
-        console.log("Moving back to", currentIndex);
         chrome.tabs.update(tabHistory[currentIndex], { active: true });
-        saveState();
+      } else {
+        console.log('Already at start of history');
       }
     } else if (command === "go-forward") {
       if (currentIndex < tabHistory.length - 1) {
-        console.log('Going forward');
+        console.log('Moving forward from index', currentIndex, 'to', currentIndex + 1);
         currentIndex++;
-        console.log("Moving forward to", currentIndex);
         chrome.tabs.update(tabHistory[currentIndex], { active: true });
-        saveState();
+      } else {
+        console.log('Already at end of history');
       }
     }
+
+    console.log('=== Final State ===');
+    console.log('History:', JSON.stringify(tabHistory));
+    console.log('New current index:', currentIndex);
+    console.log('==================');
+    saveState();
   });
 });
 
@@ -232,3 +280,23 @@ function arraysEqual(a, b) {
  * Checks the state of tab history against the stored values every 5 minutes.
  */
 setInterval(periodicStateCheck, CHECK_INTERVAL);
+
+// Add helper function to get tab info for logging
+async function getTabInfo(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    return `${tabId} (${tab.title})`;
+  } catch (e) {
+    return `${tabId} (unknown)`;
+  }
+}
+
+// Update logTabHistory function to be more detailed
+const logTabHistory = async (tabHistory) => {
+  console.log('=== Detailed Tab History ===');
+  for (let i = 0; i < tabHistory.length; i++) {
+    const tabInfo = await getTabInfo(tabHistory[i]);
+    console.log(`[${i}]: ${tabInfo}`);
+  }
+  console.log('=========================');
+};
