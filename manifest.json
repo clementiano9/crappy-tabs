@@ -8,10 +8,10 @@
     "tabs"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "src/popup.html"
   },
   "commands": {
     "go-back": {
@@ -28,8 +28,8 @@
     }
   },
   "icons": {
-    "16": "icon16.png",
-    "48": "icon16.png",
-    "128": "icon16.png"
+    "16": "img/icon.svg",
+    "48": "img/icon.svg",
+    "128": "img/icon.svg"
   }
 }
