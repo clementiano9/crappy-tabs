@@ -28,8 +28,8 @@
     }
   },
   "icons": {
-    "16": "img/icon.svg",
-    "48": "img/icon.svg",
-    "128": "img/icon.svg"
+    "16": "img/icon16.png",
+    "48": "img/icon48.png",
+    "128": "img/icon128.png"
   }
 }
