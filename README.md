@@ -15,10 +15,19 @@ The **Tab History Navigator** is a Chrome extension designed to enhance the brow
 
 ## Installation
 
-1. Download the extension files.
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable "Developer mode" in the top right corner.
-4. Click on "Load unpacked" and select the directory containing the extension files.
+### Easy Installation (Recommended)
+1. Go to the [Releases](../../releases) page
+2. Download the latest `.zip` file
+3. Unzip the downloaded file to a folder on your computer
+4. Open Chrome and navigate to `chrome://extensions/`
+5. Enable "Developer mode" in the top right corner
+6. Click "Load unpacked" and select the unzipped folder
+
+### Alternative: Manual Installation from Source
+1. Download or clone this repository
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" in the top right corner
+4. Click "Load unpacked" and select the project directory
 
 ## Usage
 
@@ -26,6 +35,26 @@ Once installed, the extension will automatically start tracking your tab history
 
 - **Go Back**: Ctrl+Shift+Left
 - **Go Forward**: Ctrl+Shift+Right
+
+## Updates
+
+To update the extension:
+1. Download the latest version from [Releases](../../releases)
+2. Unzip the new version to replace your existing folder
+3. Go to `chrome://extensions/` and click the refresh icon on Tab Navigator
+
+Alternatively, you can enable "Auto-reload" in Developer mode to automatically detect changes.
+
+## Troubleshooting
+
+**Extension not working after installation?**
+- Make sure "Developer mode" is enabled in `chrome://extensions/`
+- Try refreshing the extension by clicking the refresh icon
+- Check that you selected the correct folder (should contain `manifest.json`)
+
+**Keyboard shortcuts not working?**
+- Check for conflicting shortcuts in `chrome://extensions/shortcuts/`
+- Try customizing the shortcuts if needed
 
 ## Future Improvements
 
