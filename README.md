@@ -12,6 +12,7 @@ The **Tab History Navigator** is a Chrome extension designed to enhance the brow
 - **Cross-Window Navigation**: Allows users to navigate through tabs across different windows.
 - **Incognito Mode Support**: Optionally supports tab history in incognito mode with user permission.
 - **Sync Across Devices**: Syncs tab history across devices using Chrome's storage capabilities.
+- **Privacy-First Analytics**: Optional anonymous usage analytics to improve the extension (see [Analytics Setup](ANALYTICS_SETUP.md))
 
 ## Installation
 
@@ -55,6 +56,11 @@ Alternatively, you can enable "Auto-reload" in Developer mode to automatically d
 **Keyboard shortcuts not working?**
 - Check for conflicting shortcuts in `chrome://extensions/shortcuts/`
 - Try customizing the shortcuts if needed
+
+**Analytics issues?**
+- Check the [Analytics Setup Guide](ANALYTICS_SETUP.md)
+- Verify your PostHog API key is correct
+- Analytics can be disabled by setting `enabled: false` in `src/analytics-config.js`
 
 ## Future Improvements
 

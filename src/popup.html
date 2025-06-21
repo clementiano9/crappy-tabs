@@ -340,18 +340,8 @@
         Navigated!
     </div>
 
-
-    <script>
-        // Add interaction feedback
-        document.querySelectorAll('.shortcut-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const indicator = document.getElementById('successIndicator');
-                indicator.classList.add('show');
-                setTimeout(() => {
-                    indicator.classList.remove('show');
-                }, 2000);
-            });
-        });
-    </script>
+    <script src="analytics-config.js"></script>
+    <script src="analytics.js"></script>
+    <script src="popup.js"></script>
 </body>
 </html>

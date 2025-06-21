@@ -1,6 +1,10 @@
 // background.js
 // Service Worker for Manifest V3
 
+// Import analytics using importScripts for service worker compatibility
+importScripts('analytics-config.js');
+importScripts('analytics.js');
+
 const storage = chrome.storage.local;
 
 let tabHistory = [];
@@ -15,12 +19,16 @@ const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 let tabValidationCache = new Map();
 const CACHE_DURATION = 30000; // 30 seconds
 
+// Reduce cleanup interval to be less frequent
+const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
 /**
  * Event listener for when the extension starts up.
  * Initializes the tab history when the extension is started.
  */
 chrome.runtime.onStartup.addListener(() => {
   console.log('Extension started');
+  globalThis.analytics.track('extension_startup');
   initializeTabHistory();
 });
 
@@ -37,6 +45,9 @@ function initializeTabHistory() {
   storage.get(['tabHistory', 'currentIndex'], (result) => {
     if (chrome.runtime.lastError) {
       console.error('Error accessing storage:', chrome.runtime.lastError);
+      globalThis.analytics.trackError('storage_access_failed', 'initializeTabHistory', {
+        error: chrome.runtime.lastError.message
+      });
       return;
     }
     
@@ -71,6 +82,10 @@ function saveState() {
   storage.set({ tabHistory, currentIndex }, () => {
     if (chrome.runtime.lastError) {
       console.error('Error saving state:', chrome.runtime.lastError);
+      globalThis.analytics.trackError('storage_save_failed', 'saveState', {
+        error: chrome.runtime.lastError.message,
+        history_length: tabHistory.length
+      });
     } else {
       console.log('State saved to storage');
     }
@@ -81,8 +96,9 @@ function saveState() {
  * Event listener for when the extension is installed.
  * Initializes the tab history when the extension is installed.
  */
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   console.log('Tab History Navigator installed');
+  globalThis.analytics.trackInstall(details.reason, details.previousVersion);
   initializeTabHistory();
 });
 
@@ -221,12 +237,17 @@ async function cleanupNonExistentTabs() {
   // Only update if changes needed
   if (validTabs.length !== tabHistory.length) {
     const oldCurrentTab = tabHistory[currentIndex];
+    const removedCount = tabHistory.length - validTabs.length;
+    
     tabHistory = validTabs;
     currentIndex = Math.max(0, tabHistory.indexOf(oldCurrentTab));
     if (tabHistory.length === 0) currentIndex = -1;
     
     console.log('Cleaned up history:', tabHistory, 'new currentIndex:', currentIndex);
     saveState();
+    
+    // Track cleanup analytics
+    globalThis.analytics.trackHistoryCleanup(removedCount, validTabs.length);
   }
 }
 
@@ -241,6 +262,11 @@ async function cleanupNonExistentTabs() {
  * It also recovers the tab history if the service worker was terminated.
  */
 chrome.commands.onCommand.addListener(async (command) => {
+  const startTime = globalThis.analytics.trackNavigation(command === 'go-back' ? 'back' : 'forward', {
+    tab_count: tabHistory.length,
+    current_index: currentIndex
+  });
+  
   storage.get(['tabHistory', 'currentIndex'], async (result) => {
     if (!tabHistory.length && result.tabHistory && result.tabHistory.length) {
       tabHistory = result.tabHistory;
@@ -260,9 +286,9 @@ chrome.commands.onCommand.addListener(async (command) => {
     console.log('Current index:', currentIndex);
 
     // Only clean up if we haven't done so recently
-    const lastCleanup = await storage.get('lastCleanupTime');
+    const lastCleanupResult = await storage.get('lastCleanupTime');
     const now = Date.now();
-    if (!lastCleanup || (now - lastCleanup) > CLEANUP_INTERVAL) {
+    if (!lastCleanupResult.lastCleanupTime || (now - lastCleanupResult.lastCleanupTime) > CLEANUP_INTERVAL) {
       await cleanupNonExistentTabs();
       storage.set({ lastCleanupTime: now });
     }
@@ -271,12 +297,14 @@ chrome.commands.onCommand.addListener(async (command) => {
       if (currentIndex > 0) {
         console.log('Moving back from index', currentIndex, 'to', currentIndex - 1);
         let targetIndex = currentIndex - 1;
+        let navigationSuccess = false;
         
         // Use cached validation when possible
         while (targetIndex >= 0) {
           if (await tabExists(tabHistory[targetIndex])) {
             currentIndex = targetIndex;
             await chrome.tabs.update(tabHistory[currentIndex], { active: true });
+            navigationSuccess = true;
             break;
           }
           targetIndex--;
@@ -286,19 +314,37 @@ chrome.commands.onCommand.addListener(async (command) => {
           console.log('No valid tabs found when going back');
           await cleanupNonExistentTabs();
         }
+        
+        // Track performance and success
+        globalThis.analytics.trackPerformance('navigation_back', startTime, {
+          success: navigationSuccess,
+          target_index: targetIndex,
+          tabs_validated: Math.abs(currentIndex - targetIndex)
+        });
+        
+        globalThis.analytics.trackKeyboardShortcut('go-back', navigationSuccess, {
+          history_length: tabHistory.length,
+          starting_index: currentIndex + (navigationSuccess ? 1 : 0)
+        });
       } else {
         console.log('Already at start of history');
+        globalThis.analytics.trackKeyboardShortcut('go-back', false, {
+          reason: 'at_start_of_history',
+          history_length: tabHistory.length
+        });
       }
     } else if (command === "go-forward") {
       if (currentIndex < tabHistory.length - 1) {
         console.log('Moving forward from index', currentIndex, 'to', currentIndex + 1);
         let targetIndex = currentIndex + 1;
+        let navigationSuccess = false;
         
         // Use cached validation when possible
         while (targetIndex < tabHistory.length) {
           if (await tabExists(tabHistory[targetIndex])) {
             currentIndex = targetIndex;
             await chrome.tabs.update(tabHistory[currentIndex], { active: true });
+            navigationSuccess = true;
             break;
           }
           targetIndex++;
@@ -308,8 +354,24 @@ chrome.commands.onCommand.addListener(async (command) => {
           console.log('No valid tabs found when going forward');
           await cleanupNonExistentTabs();
         }
+        
+        // Track performance and success
+        globalThis.analytics.trackPerformance('navigation_forward', startTime, {
+          success: navigationSuccess,
+          target_index: targetIndex,
+          tabs_validated: targetIndex - currentIndex
+        });
+        
+        globalThis.analytics.trackKeyboardShortcut('go-forward', navigationSuccess, {
+          history_length: tabHistory.length,
+          starting_index: currentIndex - (navigationSuccess ? 1 : 0)
+        });
       } else {
         console.log('Already at end of history');
+        globalThis.analytics.trackKeyboardShortcut('go-forward', false, {
+          reason: 'at_end_of_history',
+          history_length: tabHistory.length
+        });
       }
     }
 
@@ -326,20 +388,44 @@ chrome.commands.onCommand.addListener(async (command) => {
  * This method is called when the user requests to clear the history.
  */
 function clearTabHistory() {
+  const previousLength = tabHistory.length;
   tabHistory = [];
   currentIndex = -1;
   saveState();
   console.log('Tab history cleared');
+  
+  // Track history clearing
+  globalThis.analytics.track('history_cleared', {
+    previous_length: previousLength,
+    cleared_timestamp: Date.now()
+  });
 }
 
 /**
  * Event listener for messages from the popup.
- * Handles the clearing of the tab history.
+ * Handles the clearing of the tab history and navigation requests.
  */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "clearHistory") {
     clearTabHistory();
     sendResponse({message: "History cleared successfully"});
+  } else if (request.action === "navigate") {
+    // Handle navigation requests from popup
+    const command = request.command;
+    globalThis.analytics.trackPopupInteraction('navigation_triggered_from_popup', {
+      command: command
+    });
+    
+    // Trigger the same navigation logic as keyboard shortcuts
+    chrome.commands.onCommand.dispatch(command);
+    sendResponse({message: "Navigation triggered"});
+  } else if (request.action === "getHistoryState") {
+    // Return current history state for popup
+    sendResponse({
+      tabHistory: tabHistory,
+      currentIndex: currentIndex,
+      totalTabs: tabHistory.length
+    });
   }
 });
 
@@ -391,9 +477,6 @@ const logTabHistory = async (tabHistory) => {
   }
   console.log('=========================');
 };
-
-// Reduce cleanup interval to be less frequent
-const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
 // Clear validation cache periodically
 setInterval(() => {
