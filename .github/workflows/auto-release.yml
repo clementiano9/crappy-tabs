@@ -1,0 +1,97 @@
+name: Auto Release Chrome Extension
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'manifest.json'
+      - 'src/**'
+      - 'img/**'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Read current version
+      id: version
+      run: |
+        VERSION=$(grep '"version":' manifest.json | cut -d'"' -f4)
+        echo "current=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Check if release exists
+      id: check_release
+      run: |
+        if gh release view ${{ steps.version.outputs.tag }} > /dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Chrome for packaging
+      if: steps.check_release.outputs.exists == 'false'
+      uses: browser-actions/setup-chrome@latest
+
+    - name: Setup private key
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "${{ secrets.CHROME_EXTENSION_KEY }}" | base64 -d > tab-navigator-key.pem
+
+    - name: Package extension
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        # Create unpacked ZIP
+        zip -r tab-navigator-unpacked-${{ steps.version.outputs.current }}.zip . \
+          -x "*.git*" "*.github*" "*node_modules*" "*.pem" "*.crx" "*.md" "updates.xml"
+        
+        # Package CRX
+        google-chrome --headless --disable-gpu --no-sandbox \
+          --pack-extension=$PWD \
+          --pack-extension-key=$PWD/tab-navigator-key.pem
+        
+        mv *.crx tab-navigator-${{ steps.version.outputs.current }}.crx
+
+    - name: Update XML manifest
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        cat > updates.xml << EOF
+        <?xml version='1.0' encoding='UTF-8'?>
+        <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
+          <app appid='bmnlodchkdllhkgcmmolehpoiibamppb'>
+            <updatecheck codebase='https://clementozemoya.github.io/tab-navigator/tab-navigator.crx' version='${{ steps.version.outputs.current }}' />
+          </app>
+        </gupdate>
+        EOF
+
+    - name: Create GitHub Release
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        gh release create ${{ steps.version.outputs.tag }} \
+          --title "Tab History Navigator v${{ steps.version.outputs.current }}" \
+          --notes "Automatic release for version ${{ steps.version.outputs.current }}" \
+          tab-navigator-${{ steps.version.outputs.current }}.crx \
+          tab-navigator-unpacked-${{ steps.version.outputs.current }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Deploy to GitHub Pages
+      if: steps.check_release.outputs.exists == 'false'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .
+        keep_files: true
+        publish_branch: gh-pages
+        include_files: |
+          updates.xml
+          tab-navigator-*.crx

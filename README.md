@@ -57,11 +57,6 @@ Alternatively, you can enable "Auto-reload" in Developer mode to automatically d
 - Check for conflicting shortcuts in `chrome://extensions/shortcuts/`
 - Try customizing the shortcuts if needed
 
-**Analytics issues?**
-- Check the [Analytics Setup Guide](ANALYTICS_SETUP.md)
-- Verify your PostHog API key is correct
-- Analytics can be disabled by setting `enabled: false` in `src/analytics-config.js`
-
 ## Future Improvements
 
 For suggestions on future improvements and features, please refer to the [Future Improvements](future_improvements.md) document.

@@ -3,6 +3,7 @@
   "name": "Tab History Navigator",
   "version": "1.1.0",
   "description": "Navigate through your tab history with keyboard shortcuts",
+  "update_url": "https://clementozemoya.github.io/tab-navigator/updates.xml",
   "permissions": [
     "storage",
     "tabs"
