@@ -5,9 +5,9 @@ const ANALYTICS_CONFIG = {
   enabled: true, // Set to false to completely disable analytics
   // Debug mode for development - set to false for production
   debug: true,
-  // Event queue settings - optimized for testing
-  batchSize: 1, // Send events immediately for testing
-  flushInterval: 10000, // 10 seconds for faster testing
+  // Event queue settings - optimized for production
+  batchSize: 10, // Send events in batches for efficiency
+  flushInterval: 30000, // 30 seconds for production
   maxQueueSize: 100,
   retryInterval: 30000, // 30 seconds
   maxRetries: 3
@@ -37,7 +37,13 @@ const EVENTS = {
   
   // History management
   HISTORY_CLEANUP: 'history_cleanup',
-  HISTORY_CLEARED: 'history_cleared'
+  HISTORY_CLEARED: 'history_cleared',
+  
+  // Activity tracking events for DAU/WAU calculation
+  APP_VIEW: '$pageview', // PostHog standard event for page views
+  SESSION_START: 'session_start',
+  SESSION_END: 'session_end',
+  DAILY_HEARTBEAT: 'daily_heartbeat'
 };
 
 const USER_PROPERTIES = {

@@ -14,6 +14,14 @@ class ExtensionAnalytics {
     this.retryTimer = null;
     this.isOnline = navigator.onLine;
     
+    // Session tracking
+    this.sessionId = null;
+    this.sessionStartTime = null;
+    this.lastActivityTime = null;
+    this.sessionTimeoutMs = 30 * 60 * 1000; // 30 minutes (PostHog standard)
+    this.activityTimer = null;
+    this.heartbeatTimer = null;
+    
     this.init();
   }
 
@@ -38,6 +46,9 @@ class ExtensionAnalytics {
       
       this.isInitialized = true;
       this.log('Analytics initialized successfully');
+      
+      // Start new session
+      this.startSession();
       
       // Process any queued events
       if (this.eventQueue.length > 0) {
@@ -185,9 +196,16 @@ class ExtensionAnalytics {
   trackNavigation(direction, properties = {}) {
     const startTime = Date.now();
     
+    // Track navigation event with app view combined for efficiency
     this.track(EVENTS.NAVIGATION, {
       direction: direction, // 'back' or 'forward'
       timestamp: startTime,
+      ...properties
+    });
+
+    // Track app view for DAU/WAU calculation
+    this.trackAppView('navigation', {
+      direction: direction,
       ...properties
     });
 
@@ -251,6 +269,41 @@ class ExtensionAnalytics {
       removed_count: removedCount,
       total_count: totalCount,
       cleanup_timestamp: Date.now()
+    });
+  }
+
+  // Activity tracking methods for DAU/WAU calculation
+  trackAppView(viewType, properties = {}) {
+    this.track(EVENTS.APP_VIEW, {
+      view_type: viewType, // 'popup', 'background_action', 'navigation'
+      timestamp: Date.now(),
+      ...properties
+    });
+  }
+
+  trackSessionStart(properties = {}) {
+    this.track(EVENTS.SESSION_START, {
+      session_id: this.getSessionId(),
+      session_start_time: Date.now(),
+      ...properties
+    });
+  }
+
+  trackSessionEnd(sessionDuration = null, properties = {}) {
+    this.track(EVENTS.SESSION_END, {
+      session_id: this.getSessionId(),
+      session_end_time: Date.now(),
+      session_duration_ms: sessionDuration,
+      ...properties
+    });
+  }
+
+
+  trackDailyHeartbeat(properties = {}) {
+    this.track(EVENTS.DAILY_HEARTBEAT, {
+      heartbeat_timestamp: Date.now(),
+      session_id: this.getSessionId(),
+      ...properties
     });
   }
 
@@ -420,11 +473,84 @@ class ExtensionAnalytics {
     };
   }
 
-  getSessionId() {
-    // Simple session ID based on extension startup
-    if (!this.sessionId) {
-      this.sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  // Session management methods
+  startSession() {
+    const now = Date.now();
+    this.sessionId = 'session_' + now + '_' + Math.random().toString(36).substr(2, 6);
+    this.sessionStartTime = now;
+    this.lastActivityTime = now;
+    
+    this.log('Starting new session:', this.sessionId);
+    this.trackSessionStart();
+    
+    // Start activity tracking
+    this.startActivityTracking();
+    this.startHeartbeatTimer();
+  }
+
+  endSession() {
+    if (!this.sessionId) return;
+    
+    const sessionDuration = this.sessionStartTime ? Date.now() - this.sessionStartTime : null;
+    this.log('Ending session:', this.sessionId, 'Duration:', sessionDuration + 'ms');
+    
+    this.trackSessionEnd(sessionDuration);
+    
+    // Clear timers
+    this.stopActivityTracking();
+    this.stopHeartbeatTimer();
+    
+    // Reset session state
+    this.sessionId = null;
+    this.sessionStartTime = null;
+    this.lastActivityTime = null;
+  }
+
+  recordActivity(activityType = 'active') {
+    this.lastActivityTime = Date.now();
+  }
+
+  checkSessionTimeout() {
+    if (!this.lastActivityTime) return;
+    
+    const timeSinceLastActivity = Date.now() - this.lastActivityTime;
+    if (timeSinceLastActivity > this.sessionTimeoutMs) {
+      this.log('Session timed out, ending session');
+      this.endSession();
     }
+  }
+
+  startActivityTracking() {
+    // Check for session timeout every 5 minutes
+    this.activityTimer = setInterval(() => {
+      this.checkSessionTimeout();
+    }, 5 * 60 * 1000);
+  }
+
+  stopActivityTracking() {
+    if (this.activityTimer) {
+      clearInterval(this.activityTimer);
+      this.activityTimer = null;
+    }
+  }
+
+  startHeartbeatTimer() {
+    // Send daily heartbeat every hour during active sessions
+    this.heartbeatTimer = setInterval(() => {
+      if (this.sessionId) {
+        this.trackDailyHeartbeat();
+      }
+    }, 60 * 60 * 1000); // 1 hour
+  }
+
+  stopHeartbeatTimer() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  getSessionId() {
     return this.sessionId;
   }
 
@@ -444,6 +570,11 @@ class ExtensionAnalytics {
   // Public method to disable analytics
   disable() {
     this.config.enabled = false;
+    
+    // End current session
+    this.endSession();
+    
+    // Clear all timers
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = null;
@@ -452,6 +583,7 @@ class ExtensionAnalytics {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
     }
+    
     this.log('Analytics disabled');
   }
 

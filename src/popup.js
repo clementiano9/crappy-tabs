@@ -7,8 +7,8 @@ class PopupController {
   }
 
   async init() {
-    // Track popup opened
-    globalThis.analytics.trackPopupInteraction('popup_opened');
+    // Track popup opened with app view (provides both popup interaction and $pageview for DAU/WAU)
+    globalThis.analytics.trackAppView('popup');
 
     // Set up event listeners
     this.setupEventListeners();

@@ -29,6 +29,7 @@ const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutes
 chrome.runtime.onStartup.addListener(() => {
   console.log('Extension started');
   globalThis.analytics.track('extension_startup');
+  globalThis.analytics.trackAppView('background_startup');
   initializeTabHistory();
 });
 
