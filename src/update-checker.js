@@ -5,7 +5,7 @@
 
 class UpdateChecker {
   constructor() {
-    this.githubApiUrl = 'https://api.github.com/repos/clementozemoya/tab-navigator/releases/latest';
+    this.githubApiUrl = 'https://api.github.com/repos/clementiano9/crappy-tabs/releases/latest';
     this.storageKey = 'updateChecker';
     this.checkIntervalHours = 24; // Check daily
   }
