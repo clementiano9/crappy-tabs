@@ -1,9 +1,11 @@
 // background.js
 // Service Worker for Manifest V3
 
-// Import analytics using importScripts for service worker compatibility
+// Import analytics and update modules using importScripts for service worker compatibility
 importScripts('analytics-config.js');
 importScripts('analytics.js');
+importScripts('update-checker.js');
+importScripts('update-notification.js');
 
 const storage = chrome.storage.local;
 
@@ -22,6 +24,10 @@ const CACHE_DURATION = 30000; // 30 seconds
 // Reduce cleanup interval to be less frequent
 const CLEANUP_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
+// Initialize update system
+const updateChecker = new UpdateChecker();
+const updateNotificationManager = new UpdateNotificationManager();
+
 /**
  * Event listener for when the extension starts up.
  * Initializes the tab history when the extension is started.
@@ -31,6 +37,7 @@ chrome.runtime.onStartup.addListener(() => {
   globalThis.analytics.track('extension_startup');
   globalThis.analytics.trackAppView('background_startup');
   initializeTabHistory();
+  initializeUpdateSystem();
 });
 
 /**
@@ -101,6 +108,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('Tab History Navigator installed');
   globalThis.analytics.trackInstall(details.reason, details.previousVersion);
   initializeTabHistory();
+  initializeUpdateSystem();
 });
 
 /**
@@ -406,7 +414,7 @@ function clearTabHistory() {
  * Event listener for messages from the popup.
  * Handles the clearing of the tab history and navigation requests.
  */
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "clearHistory") {
     clearTabHistory();
     sendResponse({message: "History cleared successfully"});
@@ -427,6 +435,46 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       currentIndex: currentIndex,
       totalTabs: tabHistory.length
     });
+  } else if (request.action === "getUpdateStatus") {
+    // Return update status for popup
+    try {
+      const updateStatus = await updateChecker.getUpdateStatus();
+      const notificationState = await updateNotificationManager.getNotificationState();
+      sendResponse({
+        ...updateStatus,
+        ...notificationState
+      });
+    } catch (error) {
+      console.error('Failed to get update status:', error);
+      sendResponse({ hasUpdate: false, error: error.message });
+    }
+    return true; // Keep message channel open for async response
+  } else if (request.action === "dismissUpdate") {
+    // User dismissed update notification
+    try {
+      await updateNotificationManager.dismissUpdate();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('Failed to dismiss update:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  } else if (request.action === "checkForUpdates") {
+    // Manual update check from popup
+    try {
+      const result = await updateChecker.forceUpdateCheck();
+      if (result.updateAvailable && result.release) {
+        await updateNotificationManager.showInPopup(result.release.version, result.release.downloadUrl);
+      }
+      sendResponse({ 
+        success: true, 
+        updateAvailable: result.updateAvailable,
+        version: result.release?.version 
+      });
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return true; // Keep message channel open for async response
   }
 });
 
@@ -491,3 +539,59 @@ setInterval(() => {
 
 // Update cleanup interval
 setInterval(cleanupNonExistentTabs, CLEANUP_INTERVAL);
+
+/**
+ * Initialize update system
+ */
+async function initializeUpdateSystem() {
+  try {
+    // Setup notification handlers
+    updateNotificationManager.setupNotificationHandlers();
+    
+    // Restore badge state if needed
+    await updateNotificationManager.restoreBadgeState();
+    
+    // Set up periodic update checks (every 24 hours)
+    chrome.alarms.create('updateCheck', { 
+      delayInMinutes: 1, // First check after 1 minute
+      periodInMinutes: 24 * 60 // Then every 24 hours
+    });
+    
+    console.log('Update system initialized');
+  } catch (error) {
+    console.error('Failed to initialize update system:', error);
+  }
+}
+
+/**
+ * Handle periodic update checks
+ */
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'updateCheck') {
+    try {
+      console.log('Performing scheduled update check');
+      const updateStatus = await updateChecker.getUpdateStatus();
+      
+      if (updateStatus.hasUpdate && updateStatus.shouldNotify) {
+        // Show notification for new update
+        const success = await updateNotificationManager.showUpdateNotification(
+          updateStatus.version, 
+          updateStatus.downloadUrl
+        );
+        
+        if (success) {
+          // Mark this version as notified
+          await updateChecker.markVersionNotified(updateStatus.version);
+          
+          // Track update notification
+          globalThis.analytics.track('update_notification_shown', {
+            version: updateStatus.version,
+            current_version: updateChecker.getCurrentVersion()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Scheduled update check failed:', error);
+    }
+  }
+});

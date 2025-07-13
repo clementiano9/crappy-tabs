@@ -262,6 +262,96 @@
         .animate-pulse {
             animation: pulse 2s infinite;
         }
+
+        .update-banner {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+
+        .update-banner:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px -8px rgba(16, 185, 129, 0.4);
+        }
+
+        .update-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .update-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .update-text {
+            flex: 1;
+        }
+
+        .update-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 2px 0;
+        }
+
+        .update-subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .update-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .update-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .update-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .update-btn.primary {
+            background: rgba(255, 255, 255, 1);
+            color: #059669;
+            font-weight: 500;
+        }
+
+        .update-btn.primary:hover {
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -273,6 +363,28 @@
             <h1 class="logo-text">Tab Navigator</h1>
         </a>
     </header>
+
+    <div class="update-banner hidden" id="updateBanner">
+        <div class="update-info">
+            <div class="update-icon">
+                <i class="ri-download-cloud-line"></i>
+            </div>
+            <div class="update-text">
+                <div class="update-title">Update Available</div>
+                <div class="update-subtitle">Version <span id="updateVersion">1.1.0</span> is ready</div>
+            </div>
+        </div>
+        <div class="update-actions">
+            <button class="update-btn" id="dismissUpdate">
+                <i class="ri-close-line"></i>
+                Later
+            </button>
+            <button class="update-btn primary" id="downloadUpdate">
+                <i class="ri-download-line"></i>
+                Download
+            </button>
+        </div>
+    </div>
 
     <div class="timeline">
         <div class="timeline-marker past available" title="2 positions back">

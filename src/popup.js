@@ -15,15 +15,33 @@ class PopupController {
     
     // Load and display current tab history state
     await this.loadHistoryState();
+    
+    // Check for available updates
+    await this.checkForUpdates();
   }
 
   setupEventListeners() {
-
     // Track logo interactions
     document.querySelector('.logo').addEventListener('click', (e) => {
       e.preventDefault();
       globalThis.analytics.trackPopupInteraction('logo_clicked');
     });
+
+    // Update notification event listeners
+    const downloadButton = document.getElementById('downloadUpdate');
+    const dismissButton = document.getElementById('dismissUpdate');
+
+    if (downloadButton) {
+      downloadButton.addEventListener('click', async () => {
+        await this.handleUpdateDownload();
+      });
+    }
+
+    if (dismissButton) {
+      dismissButton.addEventListener('click', async () => {
+        await this.handleUpdateDismiss();
+      });
+    }
   }
 
   async loadHistoryState() {
@@ -125,6 +143,99 @@ class PopupController {
       }, 2000);
       
       globalThis.analytics.trackPopupInteraction('success_indicator_shown');
+    }
+  }
+
+  async checkForUpdates() {
+    try {
+      // Get update status from background script
+      chrome.runtime.sendMessage({ action: 'getUpdateStatus' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to get update status:', chrome.runtime.lastError);
+          return;
+        }
+
+        if (response && response.hasUpdate) {
+          this.showUpdateBanner(response.version, response.downloadUrl);
+          
+          // Track update banner shown
+          globalThis.analytics.trackPopupInteraction('update_banner_shown', {
+            version: response.version
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+    }
+  }
+
+  showUpdateBanner(version, downloadUrl) {
+    const banner = document.getElementById('updateBanner');
+    const versionSpan = document.getElementById('updateVersion');
+    
+    if (banner && versionSpan) {
+      versionSpan.textContent = version;
+      banner.classList.remove('hidden');
+      banner.dataset.downloadUrl = downloadUrl;
+    }
+  }
+
+  hideUpdateBanner() {
+    const banner = document.getElementById('updateBanner');
+    if (banner) {
+      banner.classList.add('hidden');
+    }
+  }
+
+  async handleUpdateDownload() {
+    try {
+      const banner = document.getElementById('updateBanner');
+      const downloadUrl = banner?.dataset.downloadUrl;
+      
+      if (downloadUrl) {
+        // Open download page in new tab
+        await chrome.tabs.create({ url: downloadUrl });
+        
+        // Track download initiated
+        globalThis.analytics.trackPopupInteraction('update_download_clicked', {
+          download_url: downloadUrl
+        });
+        
+        // Dismiss the update notification
+        await this.handleUpdateDismiss();
+        
+        // Close popup
+        window.close();
+      }
+    } catch (error) {
+      console.error('Failed to handle update download:', error);
+      globalThis.analytics.trackError('popup_update_download_failed', 'handleUpdateDownload', {
+        error_message: error.message
+      });
+    }
+  }
+
+  async handleUpdateDismiss() {
+    try {
+      // Send dismiss message to background script
+      chrome.runtime.sendMessage({ action: 'dismissUpdate' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to dismiss update:', chrome.runtime.lastError);
+          return;
+        }
+        
+        if (response && response.success) {
+          this.hideUpdateBanner();
+          
+          // Track dismissal
+          globalThis.analytics.trackPopupInteraction('update_dismissed');
+        }
+      });
+    } catch (error) {
+      console.error('Failed to dismiss update:', error);
+      globalThis.analytics.trackError('popup_update_dismiss_failed', 'handleUpdateDismiss', {
+        error_message: error.message
+      });
     }
   }
 }

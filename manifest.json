@@ -3,10 +3,11 @@
   "name": "Tab History Navigator",
   "version": "1.0.1",
   "description": "Navigate through your tab history with keyboard shortcuts",
-  "update_url": "https://clementozemoya.github.io/tab-navigator/updates.xml",
   "permissions": [
     "storage",
-    "tabs"
+    "tabs",
+    "notifications",
+    "alarms"
   ],
   "host_permissions": [
     "https://eu.i.posthog.com/*"
