@@ -414,7 +414,7 @@ function clearTabHistory() {
  * Event listener for messages from the popup.
  * Handles the clearing of the tab history and navigation requests.
  */
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "clearHistory") {
     clearTabHistory();
     sendResponse({message: "History cleared successfully"});
@@ -436,44 +436,55 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       totalTabs: tabHistory.length
     });
   } else if (request.action === "getUpdateStatus") {
-    // Return update status for popup
-    try {
-      const updateStatus = await updateChecker.getUpdateStatus();
-      const notificationState = await updateNotificationManager.getNotificationState();
-      sendResponse({
-        ...updateStatus,
-        ...notificationState
-      });
-    } catch (error) {
-      console.error('Failed to get update status:', error);
-      sendResponse({ hasUpdate: false, error: error.message });
-    }
+    // Return update status for popup (async)
+    (async () => {
+      try {
+        console.log('Background: Getting update status...');
+        const updateStatus = await updateChecker.getUpdateStatus();
+        const notificationState = await updateNotificationManager.getNotificationState();
+        
+        const response = {
+          ...updateStatus,
+          ...notificationState
+        };
+        console.log('Background: Sending update status response:', response);
+        sendResponse(response);
+      } catch (error) {
+        console.error('Failed to get update status:', error);
+        sendResponse({ hasUpdate: false, error: error.message });
+      }
+    })();
     return true; // Keep message channel open for async response
   } else if (request.action === "dismissUpdate") {
-    // User dismissed update notification
-    try {
-      await updateNotificationManager.dismissUpdate();
-      sendResponse({ success: true });
-    } catch (error) {
-      console.error('Failed to dismiss update:', error);
-      sendResponse({ success: false, error: error.message });
-    }
-  } else if (request.action === "checkForUpdates") {
-    // Manual update check from popup
-    try {
-      const result = await updateChecker.forceUpdateCheck();
-      if (result.updateAvailable && result.release) {
-        await updateNotificationManager.showInPopup(result.release.version, result.release.downloadUrl);
+    // User dismissed update notification (async)
+    (async () => {
+      try {
+        await updateNotificationManager.dismissUpdate();
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('Failed to dismiss update:', error);
+        sendResponse({ success: false, error: error.message });
       }
-      sendResponse({ 
-        success: true, 
-        updateAvailable: result.updateAvailable,
-        version: result.release?.version 
-      });
-    } catch (error) {
-      console.error('Failed to check for updates:', error);
-      sendResponse({ success: false, error: error.message });
-    }
+    })();
+    return true; // Keep message channel open for async response
+  } else if (request.action === "checkForUpdates") {
+    // Manual update check from popup (async)
+    (async () => {
+      try {
+        const result = await updateChecker.forceUpdateCheck();
+        if (result.updateAvailable && result.release) {
+          await updateNotificationManager.showInPopup(result.release.version, result.release.downloadUrl);
+        }
+        sendResponse({ 
+          success: true, 
+          updateAvailable: result.updateAvailable,
+          version: result.release?.version 
+        });
+      } catch (error) {
+        console.error('Failed to check for updates:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
     return true; // Keep message channel open for async response
   }
 });

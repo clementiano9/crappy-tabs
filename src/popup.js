@@ -148,6 +148,8 @@ class PopupController {
 
   async checkForUpdates() {
     try {
+      console.log('Popup: Requesting update status from background...');
+      
       // Get update status from background script
       chrome.runtime.sendMessage({ action: 'getUpdateStatus' }, (response) => {
         if (chrome.runtime.lastError) {
@@ -155,17 +157,38 @@ class PopupController {
           return;
         }
 
-        if (response && response.hasUpdate) {
+        console.log('Popup: Received update status response:', response);
+
+        // Check if response is valid
+        if (!response || typeof response !== 'object') {
+          console.error('Invalid response from background script:', response);
+          return;
+        }
+
+        // Check for error in response
+        if (response.error) {
+          console.error('Background script returned error:', response.error);
+          return;
+        }
+
+        // Check if update is available
+        if (response.hasUpdate && response.version) {
+          console.log('Popup: Update available, showing banner for version:', response.version);
           this.showUpdateBanner(response.version, response.downloadUrl);
           
           // Track update banner shown
           globalThis.analytics.trackPopupInteraction('update_banner_shown', {
             version: response.version
           });
+        } else {
+          console.log('Popup: No updates available');
         }
       });
     } catch (error) {
       console.error('Failed to check for updates:', error);
+      globalThis.analytics.trackError('popup_update_check_failed', 'checkForUpdates', {
+        error_message: error.message
+      });
     }
   }
 
