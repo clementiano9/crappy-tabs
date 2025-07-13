@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab History Navigator",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Navigate through your tab history with keyboard shortcuts",
   "permissions": [
     "storage",
