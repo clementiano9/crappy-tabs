@@ -4,6 +4,12 @@
 
 The **Tab History Navigator** is a Chrome extension designed to enhance the browsing experience by allowing users to navigate through their tab history efficiently. This extension keeps track of the tabs a user has opened, enabling them to go back and forth between tabs using customizable keyboard shortcuts. It aims to provide a seamless way to manage and access previously visited tabs, improving productivity and user experience.
 
+## Demo
+
+![Tab History Navigator Demo](img/tab-navigator-demo.gif)
+
+*Navigate through your tab history chronologically using Ctrl+Shift+← and Ctrl+Shift+→ shortcuts*
+
 ## Features
 
 - **Tab History Management**: Automatically tracks the tabs opened during a browsing session.
