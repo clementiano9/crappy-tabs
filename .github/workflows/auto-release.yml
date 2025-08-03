@@ -1,4 +1,4 @@
-name: Release Tab Navigator Extension
+name: Build and Release Tab Navigator Extension
 
 on:
   push:
@@ -7,9 +7,12 @@ on:
       - 'manifest.json'
       - 'src/**'
       - 'img/**'
+      - 'package.json'
+      - 'webpack.config.js'
+      - '.env.example'
 
 jobs:
-  release:
+  build-and-release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,6 +20,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
 
     - name: Read current version
       id: version
@@ -36,11 +48,46 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Build extension
+      if: steps.check_release.outputs.exists == 'false'
+      run: npm run build
+      env:
+        POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        ANALYTICS_DEBUG: false
+        NODE_ENV: production
+
+    - name: Validate build
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        # Check that dist folder exists
+        if [ ! -d "dist" ]; then
+          echo "❌ Build failed: dist/ folder not found"
+          exit 1
+        fi
+        
+        # Check that required files exist
+        required_files=("manifest.json" "src/background.js" "src/popup.html" "src/analytics-config.js")
+        for file in "${required_files[@]}"; do
+          if [ ! -f "dist/$file" ]; then
+            echo "❌ Build validation failed: dist/$file not found"
+            exit 1
+          fi
+        done
+        
+        echo "✅ Build validation passed"
+
     - name: Create extension ZIP
       if: steps.check_release.outputs.exists == 'false'
       run: |
-        zip -r tab-navigator-v${{ steps.version.outputs.current }}.zip . \
-          -x "*.git*" "*.github*" "*node_modules*" "*.md" "AUTO-UPDATE-SETUP.md"
+        cd dist
+        zip -r ../tab-navigator-v${{ steps.version.outputs.current }}.zip . \
+          -x "*.map" "*.DS_Store"
+        cd ..
+        
+        # Also include documentation files in the release
+        zip -u tab-navigator-v${{ steps.version.outputs.current }}.zip \
+          README.md \
+          LICENSE \
 
     - name: Create GitHub Release
       if: steps.check_release.outputs.exists == 'false'

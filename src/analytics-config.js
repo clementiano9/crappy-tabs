@@ -1,10 +1,34 @@
 // src/analytics-config.js
+
+// Secure API key management
+// Environment variables will be replaced at build time by webpack
+const INJECTED_API_KEY = process.env.POSTHOG_API_KEY;
+const INJECTED_DEBUG = process.env.ANALYTICS_DEBUG;
+const INJECTED_NODE_ENV = process.env.NODE_ENV;
+
+function getAnalyticsConfig() {
+  // Use injected values (replaced at build time) instead of runtime process.env
+  const apiKey = INJECTED_API_KEY;
+  const isValidKey = apiKey && typeof apiKey === 'string' && apiKey.startsWith('phc_');
+  
+  if (!isValidKey) {
+    console.warn('Tab History Navigator: Invalid or missing PostHog API key. Analytics disabled.');
+  }
+  
+  return {
+    projectKey: isValidKey ? apiKey : null,
+    enabled: isValidKey,
+    debug: isValidKey && (INJECTED_DEBUG === 'true' || INJECTED_NODE_ENV === 'development')
+  };
+}
+
+const { projectKey, enabled, debug } = getAnalyticsConfig();
+
 const ANALYTICS_CONFIG = {
-  projectKey: 'phc_lYOytoSYcrJtMRE5ZLQhhyL7D4J4RMP13MSjK8dWQqy',
+  projectKey,
   host: 'https://eu.i.posthog.com',
-  enabled: true, // Set to false to completely disable analytics
-  // Debug mode for development - set to false for production
-  debug: true,
+  enabled, // Automatically disable if no valid API key is available
+  debug,
   // Event queue settings - optimized for production
   batchSize: 10, // Send events in batches for efficiency
   flushInterval: 30000, // 30 seconds for production

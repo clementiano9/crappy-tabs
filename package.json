@@ -1,0 +1,27 @@
+{
+  "name": "tab-history-navigator",
+  "version": "1.0.5",
+  "description": "Navigate through your tab history with keyboard shortcuts",
+  "scripts": {
+    "build": "webpack --mode=production",
+    "build:dev": "webpack --mode=development",
+    "watch": "webpack --mode=development --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "copy-webpack-plugin": "^11.0.0",
+    "dotenv": "^16.3.0",
+    "dotenv-webpack": "^8.0.0",
+    "process": "^0.11.10"
+  },
+  "keywords": [
+    "chrome-extension",
+    "productivity",
+    "tab-management",
+    "browser-extension"
+  ],
+  "author": "Tab History Navigator Team",
+  "license": "MIT"
+}

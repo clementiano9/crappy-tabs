@@ -32,9 +32,15 @@ The **Tab History Navigator** is a Chrome extension designed to enhance the brow
 
 ### Alternative: Manual Installation from Source
 1. Download or clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked" and select the project directory
+2. Install dependencies: `npm install`
+3. Copy environment file: `cp .env.example .env` (edit with your API keys if needed)
+4. Build the extension: `npm run build`
+5. Open Chrome and navigate to `chrome://extensions/`
+6. Enable "Developer mode" in the top right corner
+7. Click "Load unpacked" and select the `dist/` directory
+
+For detailed build instructions, see [BUILD.md](BUILD.md).  
+For automated builds and releases, see [GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md).
 
 ## Usage
 
