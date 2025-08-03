@@ -327,6 +327,12 @@ class ExtensionAnalytics {
       this.log('Offline, skipping flush');
       return;
     }
+    
+    // Validate configuration before attempting network requests
+    if (!this.config.projectKey || !this.config.host) {
+      this.log('Missing API key or host configuration, skipping flush');
+      return;
+    }
 
     // Filter out events with null distinct_id
     const validEvents = this.eventQueue.filter(event => event.distinct_id);
@@ -413,7 +419,7 @@ class ExtensionAnalytics {
         
         this.log(`Sending individual event ${event.event}:`, requestPayload);
         
-        const response = await fetch(`${this.config.host}/i/v0/e/`, {
+        const response = await fetch(`${this.config.host}/capture/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
