@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Tab History Navigator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .last-updated {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        .highlight {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Privacy Policy for Tab History Navigator</h1>
+    <p class="last-updated">Last Updated: February 12, 2026</p>
+
+    <h2>Overview</h2>
+    <p>Tab History Navigator is a Chrome extension that enables browser-like back/forward navigation through your tab history. We are committed to protecting your privacy and being transparent about our data practices.</p>
+
+    <div class="highlight">
+        <strong>Key Points:</strong>
+        <ul>
+            <li>Tab history is stored locally on your device only</li>
+            <li>Anonymous usage analytics can be completely disabled</li>
+            <li>We do not collect personally identifiable information</li>
+            <li>We do not sell or share your data with third parties</li>
+        </ul>
+    </div>
+
+    <h2>Information We Collect</h2>
+
+    <h3>1. Local Tab History</h3>
+    <p>The extension stores your tab navigation history locally in your browser's storage. This includes:</p>
+    <ul>
+        <li>Tab IDs (internal Chrome identifiers)</li>
+        <li>Navigation position in your history</li>
+        <li>Timestamp of last cleanup operation</li>
+    </ul>
+    <p><strong>Storage:</strong> This data is stored locally using Chrome's storage API and never leaves your device except as described in the Analytics section below.</p>
+    <p><strong>Retention:</strong> History is limited to your last 60 tab visits and is automatically cleaned up. Data is deleted when you uninstall the extension.</p>
+
+    <h3>2. Anonymous Usage Analytics (Optional)</h3>
+    <p>We use PostHog analytics to understand how users interact with the extension. This helps us improve features and fix bugs.</p>
+
+    <p><strong>What we collect:</strong></p>
+    <ul>
+        <li>Extension events (e.g., "navigated back", "navigated forward")</li>
+        <li>Anonymous session identifiers</li>
+        <li>Browser type and extension version</li>
+        <li>General error information (no personal data)</li>
+    </ul>
+
+    <p><strong>What we DO NOT collect:</strong></p>
+    <ul>
+        <li>URLs you visit</li>
+        <li>Tab titles or content</li>
+        <li>Personally identifiable information</li>
+        <li>IP addresses (anonymized by PostHog)</li>
+    </ul>
+
+    <p><strong>How to disable analytics:</strong> Analytics can be completely disabled by editing <code>src/analytics-config.js</code> and setting <code>enabled: false</code> before loading the extension.</p>
+
+    <h2>How We Use Information</h2>
+    <ul>
+        <li><strong>Tab History:</strong> To provide back/forward navigation functionality</li>
+        <li><strong>Analytics:</strong> To understand feature usage, identify bugs, and improve the extension</li>
+    </ul>
+
+    <h2>Data Sharing and Third Parties</h2>
+    <p>We do not sell, trade, or share your data with third parties, except:</p>
+    <ul>
+        <li><strong>PostHog:</strong> Anonymous analytics data is sent to PostHog (us.i.posthog.com) for usage analysis. PostHog's privacy policy: <a href="https://posthog.com/privacy">https://posthog.com/privacy</a></li>
+    </ul>
+
+    <h2>Data Security</h2>
+    <p>Tab history is stored locally using Chrome's secure storage API. Analytics data transmitted to PostHog uses HTTPS encryption.</p>
+
+    <h2>Your Rights</h2>
+    <p>You have the right to:</p>
+    <ul>
+        <li><strong>Access:</strong> View your locally stored tab history in Chrome DevTools (inspect extension background page)</li>
+        <li><strong>Delete:</strong> Clear all data by uninstalling the extension or clearing Chrome's extension storage</li>
+        <li><strong>Opt-out:</strong> Disable analytics as described above</li>
+    </ul>
+
+    <h2>Children's Privacy</h2>
+    <p>This extension does not knowingly collect information from children under 13. The extension is not directed at children.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated "Last Updated" date.</p>
+
+    <h2>Contact</h2>
+    <p>If you have questions about this privacy policy or the extension's data practices, please contact us:</p>
+    <ul>
+        <li>GitHub Issues: <a href="https://github.com/clementCodex/tab-navigator/issues">https://github.com/clementCodex/tab-navigator/issues</a></li>
+        <li>Email: [Your Contact Email]</li>
+    </ul>
+
+    <h2>Open Source</h2>
+    <p>Tab History Navigator is open source. You can review the complete source code and data handling practices at: <a href="https://github.com/clementCodex/tab-navigator">https://github.com/clementCodex/tab-navigator</a></p>
+</body>
+</html>
